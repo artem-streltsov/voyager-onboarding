@@ -1,0 +1,22 @@
+{
+  "name": "etl",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "pm2 start ecosystem.config.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@voyager/database": "workspace:database",
+    "dotenv": "^16.4.5",
+    "starknet": "^6.8.0"
+  }
+}

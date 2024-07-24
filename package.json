@@ -1,0 +1,18 @@
+{
+  "name": "onboard-voyager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:packages": "pnpm --filter common build && pnpm --filter database build",
+    "fe": "pnpm --filter frontend-site dev",
+    "api": "pnpm --filter api-services start:dev",
+    "etl": "pnpm --filter etl build && pnpm --filter etl start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@changesets/cli": "^2.27.1"
+  }
+}
