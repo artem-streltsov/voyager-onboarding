@@ -50,10 +50,10 @@ const Transaction: React.FC = () => {
     { label: 'L2 Gas Max Amount', value: transaction?.l2_gas_max_amount ? convertHexToGigaDecimal(transaction.l2_gas_max_amount) + ' GFri' : '-' },
     { label: 'L2 Gas Max Price Per Unit', value: transaction?.l2_gas_max_price_per_unit ? convertHexToGigaDecimal(transaction.l2_gas_max_price_per_unit) + ' GFri' : '-' },
     { label: 'Tip', value: transaction?.tip ? convertHexToGigaDecimal(transaction.tip) + 'GWei' : '-' },
-    { label: 'Paymaster Data', value: transaction?.paymaster_data },
-    { label: 'Account Deployment Data', value: transaction?.account_deployment_data },
-    { label: 'Nonce Data Availability Mode', value: transaction?.nonce_data_availability_mode },
-    { label: 'Fee Data Availability Mode', value: transaction?.fee_data_availability_mode },
+    { label: 'Paymaster Data', value: transaction?.paymaster_data ? transaction.paymaster_data : '-' },
+    { label: 'Account Deployment Data', value: transaction?.account_deployment_data ? transaction.account_deployment_data : '-' },
+    { label: 'Nonce Data Availability Mode', value: transaction?.nonce_data_availability_mode ? transaction.nonce_data_availability_mode : '-' },
+    { label: 'Fee Data Availability Mode', value: transaction?.fee_data_availability_mode ? transaction.fee_data_availability_mode : '-' },
     { label: 'Max Fee', value: transaction?.max_fee },
   ];
 
