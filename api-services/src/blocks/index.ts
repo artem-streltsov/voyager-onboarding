@@ -13,7 +13,7 @@ const blockHashParamsSchema = z.object({
 })
 
 const blocksParamsSchema = z.object({
-  p: z.string().default('0'),
+  p: z.string().default('1'),
   ps: z.string().default('10')
 })
 

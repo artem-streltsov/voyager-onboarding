@@ -9,7 +9,7 @@ const transactionParamsSchema = z.object({
 })
 
 const transactionsParamsSchema = z.object({
-  p: z.string().default('0'),
+  p: z.string().default('1'),
   ps: z.string().default('10')
 })
 
@@ -171,16 +171,16 @@ router.get("/transaction/:transaction_hash", async (req, res, next) => {
       return;
     } 
     if(!row) {
-      // Block not found in DB, try fetching from RPC
-      const rpcBlock = await fetchTransactionFromRPC(schemaRes.data.transaction_hash);
-      if (rpcBlock) {
-        // Block fetched successfully, insert into DB and return to user
+      // Transaction not found in DB, try fetching from RPC
+      const rpcTransaction = await fetchTransactionFromRPC(schemaRes.data.transaction_hash);
+      if (rpcTransaction) {
+        // Transaction fetched successfully, insert into DB and return to user
         try {
-          await insertTransactionIntoDB(rpcBlock);
-          res.status(200).json(rpcBlock);
+          await insertTransactionIntoDB(rpcTransaction);
+          res.status(200).json(rpcTransaction);
         } catch (insertError) {
           console.error('Error inserting transaction into DB:', insertError);
-          res.status(200).json(rpcBlock); // Still return the block to the user
+          res.status(200).json(rpcTransaction); // Still return the transaction to the user
         }
       } else {
         res.status(404).json({error: `no transaction with hash ${transaction_hash} present in the db or available from RPC`})

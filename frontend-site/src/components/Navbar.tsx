@@ -10,7 +10,7 @@ const Navbar = () => {
       padding="1rem"
       width="100vw"
       position="relative"
-      backgroundColor="#EAEAEA"
+      backgroundColor="#DDDDDD"
       marginBottom="1rem"
     >
       <Box position="absolute" left="1rem">

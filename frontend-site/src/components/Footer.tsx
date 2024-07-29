@@ -10,7 +10,7 @@ const Footer = () => {
       justifyContent={"space-around"}
       padding={"2rem"}
       width="100vw"
-      backgroundColor="#EAEAEA"
+      backgroundColor="#DDDDDD"
       marginTop="1rem"
     >
       <Flex direction="column" alignItems="start" gap="0.25rem">

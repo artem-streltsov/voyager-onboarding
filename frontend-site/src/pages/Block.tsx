@@ -73,7 +73,8 @@ const Block: React.FC = () => {
           </Stack>
           : block 
           && <Stack align="center">
-            <Text>Block #{block.block_number}</Text>
+            {/* <Text>Block #{block.block_number}</Text> */}
+            <Text>Block #<CustomLink to={`/block/${block.block_number}`}>{block.block_number}</CustomLink></Text>
             <TableContainer>
               <Table variant='simple'>
                 <TableCaption>Block details</TableCaption>

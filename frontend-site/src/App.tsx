@@ -6,7 +6,7 @@ import "./App.css"
 
 function App() {
   return (
-    <Flex flexDir={"column"} style={{ minHeight: "100vh"}}>
+    <Flex flexDir={"column"} alignItems={"center"} style={{ minHeight: "100vh", minWidth: "100vw"}}>
       <Navbar />
       <Outlet />
       <Footer />

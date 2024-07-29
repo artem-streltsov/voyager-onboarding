@@ -9,8 +9,12 @@ import { validPageSizes } from "../../../common/src/blocks"
 
 const Transactions: React.FC = () => {
   const { ps, p } = useParams();
-  const [pageSize, setPageSize] = useState<number>(parseInt(ps ?? '10'));
-  const [pageNumber, setPageNumber] = useState<number>(parseInt(p ?? '1'));
+
+  const initialPageSize = validPageSizes.includes(parseInt(ps ?? '10')) ? parseInt(ps ?? '10') : 10;
+  const initialPageNumber = parseInt(p ?? '1');
+
+  const [pageSize, setPageSize] = useState<number>(initialPageSize);
+  const [pageNumber, setPageNumber] = useState<number>(initialPageNumber);
 
   const { data, error, isLoading } = API.useTransactions({ ps: pageSize.toString(), p: pageNumber.toString() });
 
