@@ -118,18 +118,28 @@ router.get("/blocks", async (req, res, next) => {
     return;
   }
 
-  var totalPages = 0;
-
-  const totalQuery = `SELECT MAX(block_number) as maxBlockNumber FROM blocks`;
-  database_connection.get(totalQuery, undefined, (err: any, totalResult: { maxBlockNumber: number }) => {
+  var latestBlock = 0;
+  const latestBlockQuery = `SELECT MAX(block_number) as maxBlockNumber FROM blocks`;
+  database_connection.get(latestBlockQuery, undefined, (err: any, totalResult: { maxBlockNumber: number }) => {
     if (err) {
       console.error(err);
       res.status(500).json({ error: "failed to load data from db" });
       return;
     }
 
-    const totalBlocks = totalResult.maxBlockNumber;
-    totalPages = Math.ceil(totalBlocks / pageSize);
+    latestBlock = totalResult.maxBlockNumber
+  });
+
+  var totalPages = 0;
+  const totalQuery = `SELECT COUNT(*) as totalPages FROM blocks`;
+  database_connection.get(totalQuery, undefined, (err: any, totalResult: { totalPages: number }) => {
+    if (err) {
+      console.error(err);
+      res.status(500).json({ error: "failed to load data from db" });
+      return;
+    }
+
+    totalPages = Math.floor(totalResult.totalPages / pageSize);
   });
 
   const query = `SELECT * FROM blocks ORDER BY block_number DESC LIMIT ${pageSize} OFFSET ${page*pageSize}`
@@ -144,7 +154,7 @@ router.get("/blocks", async (req, res, next) => {
       res.status(404).json({error: `no blocks present in the db`})
       return;
     }
-    res.status(200).json({rows, meta: {totalPages: totalPages}})
+    res.status(200).json({rows, meta: {totalPages: totalPages, latestBlock: latestBlock}})
     return;
   })
 })

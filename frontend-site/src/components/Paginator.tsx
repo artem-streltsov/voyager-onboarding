@@ -7,9 +7,10 @@ interface PaginatorProps {
   pageSize: number;
   onPageChange: (newPageNumber: number) => void;
   onPageSizeChange: (newPageSize: number) => void;
+  totalPages: number;
 }
 
-const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChange, onPageSizeChange }) => {
+const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChange, onPageSizeChange, totalPages }) => {
   const [inputValue, setInputValue] = useState<string>(pageNumber.toString());
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -64,15 +65,20 @@ const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChang
         <Button onClick={handlePreviousPage} isDisabled={pageNumber === 1}>Previous</Button>
       </Box>
       <Box>
-        <Input
-          type="number"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          ref={inputRef}
-          onKeyPress={handleKeyPress}
-          width="60px"
-          textAlign="center"
-        />
+        <Flex align="center" whiteSpace="nowrap">
+          <Input
+            type="number"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            ref={inputRef}
+            onKeyPress={handleKeyPress}
+            width="80px"
+            textAlign="center"
+          />
+          {totalPages !== -1 && (
+            <Box ml="2">/ {totalPages}</Box>
+          )}
+        </Flex>
       </Box>
       <Box>
         <Button onClick={handleGoToButton}>Go</Button>

@@ -131,8 +131,7 @@ router.get("/transactions", async (req, res, next) => {
       return;
     }
 
-    const totalTransactions = totalResult.transactionCount;
-    totalPages = Math.ceil(totalTransactions / pageSize);
+    totalPages = Math.floor(totalResult.transactionCount / pageSize);
   });
 
   const query = `SELECT * FROM transactions ORDER BY block_number DESC LIMIT ${pageSize} OFFSET ${page*pageSize}`

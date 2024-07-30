@@ -18,7 +18,8 @@ const Blocks: React.FC = () => {
 
   const { data, error, isLoading } = API.useBlocks({ ps: pageSize.toString(), p: pageNumber.toString() });
 
-  console.log(data?.meta.totalPages)
+  const totalPages = data?.meta.totalPages;
+  // const latestBlock = data?.meta.latestBlock;
 
   const convertTimestamp = (timestamp: string): string => {
     const date = new Date(Number(timestamp) * 1000);
@@ -102,6 +103,7 @@ const Blocks: React.FC = () => {
                 pageSize={pageSize}
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
+                totalPages={totalPages ? totalPages : -1}
               />
             </Stack>
       }

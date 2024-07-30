@@ -23,7 +23,8 @@ export type Block = z.infer<typeof block>;
 export const blocksResponse = z.object({
   rows: z.array(block),
   meta: z.object({
-    totalPages: z.number()
+    totalPages: z.number(),
+    latestBlock: z.number(),
   })
 });
 

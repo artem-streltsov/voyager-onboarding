@@ -18,7 +18,7 @@ const Transactions: React.FC = () => {
 
   const { data, error, isLoading } = API.useTransactions({ ps: pageSize.toString(), p: pageNumber.toString() });
 
-  console.log(data?.meta.totalPages)
+  const totalPages = data?.meta.totalPages;
 
   const handlePageSizeChange = (newPageSize: number) => {
     if (validPageSizes.includes(newPageSize)) {
@@ -92,6 +92,7 @@ const Transactions: React.FC = () => {
                 pageSize={pageSize}
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
+                totalPages={totalPages ? totalPages : -1}
               />
             </Stack>
       }
