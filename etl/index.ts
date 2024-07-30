@@ -14,6 +14,7 @@ async function runSyncProcess() {
     while (true) {
         try {
             const latestBlockNumber = await provider.getBlockNumber();
+            await sleep(1000);
             console.log('Latest onchain block', latestBlockNumber);
 
             console.log('Starting block sync...');

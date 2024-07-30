@@ -22,6 +22,7 @@ function runSyncProcess() {
         while (true) {
             try {
                 const latestBlockNumber = yield provider.getBlockNumber();
+                yield sleep(1000);
                 console.log('Latest onchain block', latestBlockNumber);
                 console.log('Starting block sync...');
                 yield (0, blocks_1.runBlockSync)(provider, latestBlockNumber);

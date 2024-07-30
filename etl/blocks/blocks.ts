@@ -83,6 +83,9 @@ const syncBlockRange = async (provider: RpcProvider, start: number, end: number)
 
 const CHUNK_SIZE = 100;
 const chunking = async (provider: RpcProvider, start: number, end: number) => {
+	if (!end) {
+		end = await provider.getBlockNumber();
+	}
 	const tasks: Promise<any>[] = []
 	if(start >= end) return;
 

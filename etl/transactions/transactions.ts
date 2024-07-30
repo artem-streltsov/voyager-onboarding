@@ -106,6 +106,9 @@ async function processTransactions(provider: RpcProvider, transactions: any[], b
 
 const CHUNK_SIZE = 10;
 const chunking = async (provider: RpcProvider, start: number, end: number) => {
+    if (!end) {
+		end = await provider.getBlockNumber();
+	}
 	const tasks: Promise<any>[] = []
 	if(start >= end) return;
 

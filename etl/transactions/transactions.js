@@ -117,6 +117,9 @@ function processTransactions(provider, transactions, block_number) {
 }
 const CHUNK_SIZE = 10;
 const chunking = (provider, start, end) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!end) {
+        end = yield provider.getBlockNumber();
+    }
     const tasks = [];
     if (start >= end)
         return;
