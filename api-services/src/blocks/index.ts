@@ -5,34 +5,32 @@ import z from "zod";
 import axios from "axios";
 
 const blockParamsSchema = z.object({
-  block_number: z.number()
-})
+  block_number: z.number(),
+});
 
 const blockHashParamsSchema = z.object({
-  block_hash: z.string().startsWith('0x')
-})
+  block_hash: z.string().startsWith("0x"),
+});
 
 const blocksParamsSchema = z.object({
-  p: z.string().default('1'),
-  ps: z.string().default('10')
-})
+  p: z.string().default("1"),
+  ps: z.string().default("10"),
+});
 
 const router: Router = express.Router();
 
 async function fetchBlockFromRPC(blockNumber: number): Promise<Block | null> {
   try {
-    const response = await axios.post('https://free-rpc.nethermind.io/mainnet-juno', {
-      "jsonrpc": "2.0",
-      "method": "starknet_getBlockWithTxHashes",
-      "params": {
-          "block_id": {
-              "block_number": blockNumber
-          }
+    const response = await axios.post("https://free-rpc.nethermind.io/mainnet-juno", {
+      jsonrpc: "2.0",
+      method: "starknet_getBlockWithTxHashes",
+      params: {
+        block_id: {
+          block_number: blockNumber,
+        },
       },
-      "id": 1
-    }
-    
-  );
+      id: 1,
+    });
 
     if (response.data.result) {
       const block = response.data.result;
@@ -54,7 +52,7 @@ async function fetchBlockFromRPC(blockNumber: number): Promise<Block | null> {
     }
     return null;
   } catch (error) {
-    console.error('Error fetching block from RPC:', error);
+    console.error("Error fetching block from RPC:", error);
     return null;
   }
 }
@@ -81,7 +79,7 @@ function insertBlockIntoDB(block: Block): Promise<void> {
 
     database_connection.run(query, values, (err) => {
       if (err) {
-        console.error('Error inserting block into DB:', err);
+        console.error("Error inserting block into DB:", err);
         reject(err);
       } else {
         resolve();
@@ -91,21 +89,21 @@ function insertBlockIntoDB(block: Block): Promise<void> {
 }
 
 router.get("/blocks", async (req, res, next) => {
-  const schemaRes = blocksParamsSchema.safeParse({ p: req.query.p, ps: req.query.ps })
+  const schemaRes = blocksParamsSchema.safeParse({ p: req.query.p, ps: req.query.ps });
 
-  if(!schemaRes.success) {
-    res.status(400).json(schemaRes.error)
-    return
+  if (!schemaRes.success) {
+    res.status(400).json(schemaRes.error);
+    return;
   }
 
-  const { ps, p } = schemaRes.data
+  const { ps, p } = schemaRes.data;
 
   const page = parseInt(p);
   const pageSize = parseInt(ps);
 
-  if(isNaN(page) || isNaN(pageSize)) {
-    res.status(400).json({error: "failed to parse pageSize or page"})
-    return
+  if (isNaN(page) || isNaN(pageSize)) {
+    res.status(400).json({ error: "failed to parse pageSize or page" });
+    return;
   }
 
   if (!validPageSizes.includes(pageSize)) {
@@ -113,71 +111,89 @@ router.get("/blocks", async (req, res, next) => {
     return;
   }
 
-  if (page < 0) {
-    res.status(400).json({ error: "page must be a non-negative integer" });
+  if (page < 1) {
+    res.status(400).json({ error: "page must be a positive integer" });
     return;
   }
 
-  var latestBlock = 0;
-  const latestBlockQuery = `SELECT MAX(block_number) as maxBlockNumber FROM blocks`;
-  database_connection.get(latestBlockQuery, undefined, (err: any, totalResult: { maxBlockNumber: number }) => {
-    if (err) {
-      console.error(err);
-      res.status(500).json({ error: "failed to load data from db" });
+  try {
+    const latestBlockQuery = `SELECT MAX(block_number) as maxBlockNumber FROM blocks`;
+    const latestBlockResult = await new Promise<{ maxBlockNumber: number | null }>((resolve, reject) =>
+      database_connection.get(latestBlockQuery, undefined, (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result as { maxBlockNumber: number | null });
+        }
+      })
+    );
+
+    const totalQuery = `SELECT COUNT(*) as totalBlocks FROM blocks`;
+    const totalResult = await new Promise<{ totalBlocks: number }>((resolve, reject) =>
+      database_connection.get(totalQuery, undefined, (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result as { totalBlocks: number });
+        }
+      })
+    );
+
+    const totalBlocks = totalResult.totalBlocks;
+    const totalPages = Math.ceil(totalBlocks / pageSize);
+
+    if (page > totalPages && totalPages > 0) {
+      res.status(404).json({ error: "page number out of range" });
       return;
     }
 
-    latestBlock = totalResult.maxBlockNumber
-  });
+    const offset = (page - 1) * pageSize;
+    const query = `SELECT * FROM blocks ORDER BY block_number DESC LIMIT ${pageSize} OFFSET ${offset}`;
 
-  var totalPages = 0;
-  const totalQuery = `SELECT COUNT(*) as totalPages FROM blocks`;
-  database_connection.get(totalQuery, undefined, (err: any, totalResult: { totalPages: number }) => {
-    if (err) {
-      console.error(err);
-      res.status(500).json({ error: "failed to load data from db" });
-      return;
-    }
-
-    totalPages = Math.floor(totalResult.totalPages / pageSize);
-  });
-
-  const query = `SELECT * FROM blocks ORDER BY block_number DESC LIMIT ${pageSize} OFFSET ${page*pageSize}`
-
-  database_connection.all(query, undefined, (err:any, rows: Block[]) => {
-    if(err != null) {
-      console.log(err)
-      res.status(404).json({error: "failed to load data from db"})
-      return;
-    } 
-    if(!rows) {
-      res.status(404).json({error: `no blocks present in the db`})
-      return;
-    }
-    res.status(200).json({rows, meta: {totalPages: totalPages, latestBlock: latestBlock}})
-    return;
-  })
-})
+    database_connection.all(query, undefined, (err: any, rows: Block[]) => {
+      if (err != null) {
+        console.log(err);
+        res.status(500).json({ error: "failed to load data from db" });
+        return;
+      }
+      if (!rows || rows.length === 0) {
+        res.status(404).json({ error: `no blocks present on page ${page}` });
+        return;
+      }
+      res.status(200).json({
+        rows,
+        meta: {
+          totalPages,
+          latestBlock: latestBlockResult.maxBlockNumber ?? 0,
+          totalBlocks,
+        },
+      });
+    });
+  } catch (err) {
+    console.error("Database error:", err);
+    res.status(500).json({ error: "internal server error" });
+  }
+});
 
 router.get("/block/:block_number", async (req, res, next) => {
   const block_number = req.params.block_number;
 
-  const schemaRes = blockParamsSchema.safeParse({block_number: parseInt(block_number)})
+  const schemaRes = blockParamsSchema.safeParse({ block_number: parseInt(block_number) });
 
-  if(!schemaRes.success) {
-    res.status(400).json(schemaRes.error)
-    return
+  if (!schemaRes.success) {
+    res.status(400).json(schemaRes.error);
+    return;
   }
 
-  const query = `SELECT * FROM blocks WHERE block_number = ${schemaRes.data.block_number}`
+  const query = `SELECT * FROM blocks WHERE block_number = ${schemaRes.data.block_number}`;
 
   database_connection.get(query, undefined, async (err, row: Block) => {
-    if(err != null) {
-      console.log(err)
-      res.status(404).json({error: "failed to load data from db"})
+    if (err != null) {
+      console.log(err);
+      res.status(404).json({ error: "failed to load data from db" });
       return;
-    } 
-    if(!row) {
+    }
+    if (!row) {
       // Block not found in DB, try fetching from RPC
       const rpcBlock = await fetchBlockFromRPC(schemaRes.data.block_number);
       if (rpcBlock) {
@@ -186,44 +202,42 @@ router.get("/block/:block_number", async (req, res, next) => {
           await insertBlockIntoDB(rpcBlock);
           res.status(200).json(rpcBlock);
         } catch (insertError) {
-          console.error('Error inserting block into DB:', insertError);
+          console.error("Error inserting block into DB:", insertError);
           res.status(200).json(rpcBlock); // Still return the block to the user
         }
       } else {
-        res.status(404).json({error: `no block number ${block_number} present in the db or available from RPC`})
+        res.status(404).json({ error: `no block number ${block_number} present in the db or available from RPC` });
       }
       return;
     }
-    res.status(200).json(row)
-    return;
-  })
-})
+    res.status(200).json(row);
+  });
+});
 
 router.get("/block_hash/:block_hash", async (req, res, next) => {
   const block_hash = req.params.block_hash;
 
-  const schemaRes = blockHashParamsSchema.safeParse({block_hash})
+  const schemaRes = blockHashParamsSchema.safeParse({ block_hash });
 
-  if(!schemaRes.success) {
-    res.status(400).json(schemaRes.error)
-    return
+  if (!schemaRes.success) {
+    res.status(400).json(schemaRes.error);
+    return;
   }
 
-  const query = `SELECT * FROM blocks WHERE block_hash = ?`
+  const query = `SELECT * FROM blocks WHERE block_hash = ?`;
 
   database_connection.get(query, [schemaRes.data.block_hash], (err, row: Block) => {
-    if(err != null) {
-      console.log(err)
-      res.status(404).json({error: "failed to load data from db"})
-      return;
-    } 
-    if(!row) {
-      res.status(404).json({error: `no block with hash ${block_hash} present in the db`})
+    if (err != null) {
+      console.log(err);
+      res.status(404).json({ error: "failed to load data from db" });
       return;
     }
-    res.status(200).json(row)
-    return;
-  })
-})
+    if (!row) {
+      res.status(404).json({ error: `no block with hash ${block_hash} present in the db` });
+      return;
+    }
+    res.status(200).json(row);
+  });
+});
 
-export default router
+export default router;

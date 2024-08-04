@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Box, Button, Flex, Input, Select } from "@chakra-ui/react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -10,16 +10,27 @@ interface PaginatorProps {
   totalPages: number;
 }
 
-const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChange, onPageSizeChange, totalPages }) => {
+const Paginator: React.FC<PaginatorProps> = ({
+  pageNumber,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  totalPages,
+}) => {
   const [inputValue, setInputValue] = useState<string>(pageNumber.toString());
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const baseURL = location.pathname;
 
+  useEffect(() => {
+    setInputValue(pageNumber.toString());
+  }, [pageNumber]);
+
   const handlePageSizeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newPageSize = parseInt(event.target.value);
     onPageSizeChange(newPageSize);
+    onPageChange(1); // Reset to the first page when page size changes
     setInputValue("1");
     navigate(`${baseURL}?ps=${newPageSize}&p=1`);
   };
@@ -32,15 +43,17 @@ const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChang
   };
 
   const handleNextPage = () => {
-    const newPageNumber = pageNumber + 1;
-    onPageChange(newPageNumber);
-    setInputValue(newPageNumber.toString());
-    navigate(`${baseURL}?ps=${pageSize}&p=${newPageNumber}`);
+    const newPageNumber = pageNumber < totalPages ? pageNumber + 1 : totalPages;
+    if (newPageNumber <= totalPages) {
+      onPageChange(newPageNumber);
+      setInputValue(newPageNumber.toString());
+      navigate(`${baseURL}?ps=${pageSize}&p=${newPageNumber}`);
+    }
   };
 
   const handleGotoPage = (value: string) => {
     const newPageNumber = parseInt(value);
-    if (!isNaN(newPageNumber) && newPageNumber >= 1) {
+    if (!isNaN(newPageNumber) && newPageNumber >= 1 && newPageNumber <= totalPages) {
       onPageChange(newPageNumber);
       setInputValue(newPageNumber.toString());
       navigate(`${baseURL}?ps=${pageSize}&p=${newPageNumber}`);
@@ -54,7 +67,7 @@ const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChang
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' && inputRef.current) {
+    if (event.key === "Enter" && inputRef.current) {
       handleGotoPage(inputRef.current.value);
     }
   };
@@ -62,7 +75,9 @@ const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChang
   return (
     <Flex direction="row" gap="1rem" mt="4" align="center">
       <Box>
-        <Button onClick={handlePreviousPage} isDisabled={pageNumber === 1}>Previous</Button>
+        <Button onClick={handlePreviousPage} isDisabled={pageNumber === 1}>
+          Previous
+        </Button>
       </Box>
       <Box>
         <Flex align="center" whiteSpace="nowrap">
@@ -75,9 +90,7 @@ const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChang
             width="80px"
             textAlign="center"
           />
-          {totalPages !== -1 && (
-            <Box ml="2">/ {totalPages}</Box>
-          )}
+          {totalPages !== -1 && <Box ml="2">/ {totalPages}</Box>}
         </Flex>
       </Box>
       <Box>
@@ -90,7 +103,12 @@ const Paginator: React.FC<PaginatorProps> = ({ pageNumber, pageSize, onPageChang
         <option value="100">100</option>
       </Select>
       <Box>
-        <Button onClick={handleNextPage}>Next</Button>
+        <Button
+          onClick={handleNextPage}
+          isDisabled={totalPages !== -1 && pageNumber >= totalPages}
+        >
+          Next
+        </Button>
       </Box>
     </Flex>
   );

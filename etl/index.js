@@ -21,8 +21,8 @@ const database_1 = __importDefault(require("@voyager/database"));
 const RPC_NODE_URL = process.env.RPC_NODE_URL;
 const provider = new starknet_1.RpcProvider({ nodeUrl: RPC_NODE_URL });
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-const CHUNK_SIZE = 10;
-const PAUSE_BETWEEN_CHUNKS = 5000;
+const CHUNK_SIZE = 15;
+const PAUSE_BETWEEN_CHUNKS = 1000;
 function runSyncProcess() {
     return __awaiter(this, void 0, void 0, function* () {
         while (true) {
@@ -68,7 +68,7 @@ function getCurrentSyncedBlock() {
                 }
                 else {
                     // If no blocks are synced yet, start from block 75000
-                    resolve(row.max_block !== null ? row.max_block : 75000);
+                    resolve(row.max_block !== null ? row.max_block - 1 : 75000);
                 }
             });
         });

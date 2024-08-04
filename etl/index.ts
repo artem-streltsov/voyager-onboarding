@@ -11,8 +11,8 @@ const provider = new RpcProvider({ nodeUrl: RPC_NODE_URL });
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const CHUNK_SIZE = 10;
-const PAUSE_BETWEEN_CHUNKS = 5000;
+const CHUNK_SIZE = 15;
+const PAUSE_BETWEEN_CHUNKS = 1000;
 
 async function runSyncProcess() {
     while (true) {

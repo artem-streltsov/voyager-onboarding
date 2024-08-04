@@ -5,27 +5,26 @@ import z from "zod";
 import axios from "axios";
 
 const transactionParamsSchema = z.object({
-  transaction_hash: z.string().startsWith('0x')
-})
+  transaction_hash: z.string().startsWith("0x"),
+});
 
 const transactionsParamsSchema = z.object({
-  p: z.string().default('1'),
-  ps: z.string().default('10')
-})
+  p: z.string().default("1"),
+  ps: z.string().default("10"),
+});
 
 const router: Router = express.Router();
 
 async function fetchTransactionFromRPC(transactionHash: string): Promise<Transaction | null> {
   try {
-    const response = await axios.post('https://free-rpc.nethermind.io/mainnet-juno', {
-      "jsonrpc": "2.0",
-      "method": "starknet_getTransactionByHash",
-      "params": {
-        "transaction_hash": transactionHash
+    const response = await axios.post("https://free-rpc.nethermind.io/mainnet-juno", {
+      jsonrpc: "2.0",
+      method: "starknet_getTransactionByHash",
+      params: {
+        transaction_hash: transactionHash,
       },
-      "id": 1
-    }
-  );
+      id: 1,
+    });
 
     if (response.data.result) {
       const transaction = response.data.result;
@@ -47,12 +46,12 @@ async function fetchTransactionFromRPC(transactionHash: string): Promise<Transac
         account_deployment_data: transaction.account_deployment_data,
         nonce_data_availability_mode: transaction.nonce_data_availability_mode,
         fee_data_availability_mode: transaction.fee_data_availability_mode,
-        max_fee: transaction.max_fee
+        max_fee: transaction.max_fee,
       };
     }
     return null;
   } catch (error) {
-    console.error('Error fetching transaction from RPC:', error);
+    console.error("Error fetching transaction from RPC:", error);
     return null;
   }
 }
@@ -62,29 +61,29 @@ function insertTransactionIntoDB(transaction: Transaction): Promise<void> {
   return new Promise((resolve, reject) => {
     const query = `INSERT INTO transactions (block_number, transaction_hash, type, version, nonce, sender_address, signature, calldata, l1_gas_max_amount, l1_gas_max_price_per_unit, l2_gas_max_amount, l2_gas_max_price_per_unit, tip, paymaster_data, account_deployment_data, nonce_data_availability_mode, fee_data_availability_mode, max_fee) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const values = [
-        transaction.block_number,
-        transaction.transaction_hash,
-        transaction.type,
-        transaction.version,
-        transaction.nonce,
-        transaction.sender_address,
-        transaction.signature,
-        transaction.calldata,
-        transaction.l1_gas_max_amount,
-        transaction.l1_gas_max_price_per_unit,
-        transaction.l2_gas_max_amount,
-        transaction.l2_gas_max_price_per_unit,
-        transaction.tip,
-        transaction.paymaster_data,
-        transaction.account_deployment_data,
-        transaction.nonce_data_availability_mode,
-        transaction.fee_data_availability_mode,
-        transaction.max_fee
+      transaction.block_number,
+      transaction.transaction_hash,
+      transaction.type,
+      transaction.version,
+      transaction.nonce,
+      transaction.sender_address,
+      transaction.signature,
+      transaction.calldata,
+      transaction.l1_gas_max_amount,
+      transaction.l1_gas_max_price_per_unit,
+      transaction.l2_gas_max_amount,
+      transaction.l2_gas_max_price_per_unit,
+      transaction.tip,
+      transaction.paymaster_data,
+      transaction.account_deployment_data,
+      transaction.nonce_data_availability_mode,
+      transaction.fee_data_availability_mode,
+      transaction.max_fee,
     ];
 
     database_connection.run(query, values, (err) => {
       if (err) {
-        console.error('Error inserting transaction into DB:', err);
+        console.error("Error inserting transaction into DB:", err);
         reject(err);
       } else {
         resolve();
@@ -94,21 +93,24 @@ function insertTransactionIntoDB(transaction: Transaction): Promise<void> {
 }
 
 router.get("/transactions", async (req, res, next) => {
-  const schemaRes = transactionsParamsSchema.safeParse({ p: req.query.p, ps: req.query.ps })
+  const schemaRes = transactionsParamsSchema.safeParse({
+    p: req.query.p,
+    ps: req.query.ps,
+  });
 
-  if(!schemaRes.success) {
-    res.status(400).json(schemaRes.error)
-    return
+  if (!schemaRes.success) {
+    res.status(400).json(schemaRes.error);
+    return;
   }
 
-  const { ps, p } = schemaRes.data
+  const { ps, p } = schemaRes.data;
 
   const page = parseInt(p);
   const pageSize = parseInt(ps);
 
-  if(isNaN(page) || isNaN(pageSize)) {
-    res.status(400).json({error: "failed to parse pageSize or page"})
-    return
+  if (isNaN(page) || isNaN(pageSize)) {
+    res.status(400).json({ error: "failed to parse pageSize or page" });
+    return;
   }
 
   if (!validPageSizes.includes(pageSize)) {
@@ -116,12 +118,10 @@ router.get("/transactions", async (req, res, next) => {
     return;
   }
 
-  if (page < 0) {
-    res.status(400).json({ error: "page must be a non-negative integer" });
+  if (page < 1) {
+    res.status(400).json({ error: "page must be a positive integer" });
     return;
   }
-
-  var totalPages = 0;
 
   const totalQuery = `SELECT COUNT(*) as transactionCount FROM transactions`;
   database_connection.get(totalQuery, undefined, (err: any, totalResult: { transactionCount: number }) => {
@@ -131,25 +131,31 @@ router.get("/transactions", async (req, res, next) => {
       return;
     }
 
-    totalPages = Math.floor(totalResult.transactionCount / pageSize);
-  });
+    const transactionCount = totalResult.transactionCount;
+    const totalPages = Math.ceil(transactionCount / pageSize);
 
-  const query = `SELECT * FROM transactions ORDER BY block_number DESC LIMIT ${pageSize} OFFSET ${page*pageSize}`
-
-  database_connection.all(query, undefined, (err:any, rows: Transaction[]) => {
-    if(err != null) {
-      console.log(err)
-      res.status(404).json({error: "failed to load data from db"})
-      return;
-    } 
-    if(!rows) {
-      res.status(404).json({error: `no transactions present in the db`})
+    if (page > totalPages && totalPages > 0) {
+      res.status(404).json({ error: "page number out of range" });
       return;
     }
-    res.status(200).json({rows, meta: {totalPages: totalPages}})
-    return;
-  })
-})
+
+    const offset = (page - 1) * pageSize;
+    const query = `SELECT * FROM transactions ORDER BY block_number DESC LIMIT ${pageSize} OFFSET ${offset}`;
+
+    database_connection.all(query, undefined, (err: any, rows: Transaction[]) => {
+      if (err != null) {
+        console.error(err);
+        res.status(500).json({ error: "failed to load data from db" });
+        return;
+      }
+      if (!rows || rows.length === 0) {
+        res.status(404).json({ error: `no transactions present on page ${page}` });
+        return;
+      }
+      res.status(200).json({ rows, meta: { totalPages: totalPages, transactionCount: transactionCount } });
+    });
+  });
+});
 
 router.get("/transaction/:transaction_hash", async (req, res, next) => {
   const transaction_hash = req.params.transaction_hash;

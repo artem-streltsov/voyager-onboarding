@@ -116,7 +116,6 @@ function processTransactions(provider, transactions, block_number) {
     });
 }
 const runTransactionSync = (provider, startBlock, endBlock) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`Syncing transactions for blocks from ${startBlock} to ${endBlock}`);
     yield processBlockRange(provider, startBlock, endBlock);
 });
 exports.runTransactionSync = runTransactionSync;
