@@ -21,20 +21,19 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 function fetchTransactions(provider, blockNumber) {
     return __awaiter(this, void 0, void 0, function* () {
         const block = yield provider.getBlockWithTxHashes(blockNumber);
-        console.log('Number of transactions: ', block.transactions.length);
         return block === null || block === void 0 ? void 0 : block.transactions;
     });
 }
 function processBlockRange(provider, startBlock, endBlock) {
     return __awaiter(this, void 0, void 0, function* () {
-        for (let current_block = endBlock; current_block > startBlock && current_block <= endBlock; current_block--) {
+        for (let current_block = startBlock; current_block <= endBlock; current_block++) {
             console.log('Syncing transactions in block ', current_block);
             let retries = 3;
             while (retries > 0) {
                 try {
                     const transactions = yield fetchTransactions(provider, current_block);
                     yield processTransactions(provider, transactions, current_block);
-                    break; // If successful, break out of the retry loop
+                    break;
                 }
                 catch (error) {
                     console.error(`Error syncing transactions in block ${current_block}. Retries left: ${retries - 1}`);
@@ -43,7 +42,7 @@ function processBlockRange(provider, startBlock, endBlock) {
                         console.error(`Failed to sync transactions in block ${current_block} after 3 attempts`);
                     }
                     else {
-                        yield sleep(1000); // Wait for 1 second before retrying
+                        yield sleep(5000);
                     }
                 }
             }
@@ -58,7 +57,6 @@ function processTransactions(provider, transactions, block_number) {
             while (retries > 0) {
                 try {
                     const transaction = yield provider.getTransaction(transaction_hash);
-                    console.log('ACCOUNT DEPLOYMENT DATA', transaction === null || transaction === void 0 ? void 0 : transaction.account_deployment_data);
                     const query = `
                     INSERT OR REPLACE INTO transactions (
                         transaction_hash, block_number, type, version, nonce, sender_address, signature, calldata,
@@ -88,7 +86,8 @@ function processTransactions(provider, transactions, block_number) {
                         transaction === null || transaction === void 0 ? void 0 : transaction.max_fee
                     ];
                     yield new Promise((resolve, reject) => {
-                        database_1.default.run(query, params, (err) => {
+                        const stmt = database_1.default.prepare(query);
+                        stmt.run(params, function (err) {
                             if (err) {
                                 console.error("Error inserting transaction:", err);
                                 reject(err);
@@ -96,9 +95,10 @@ function processTransactions(provider, transactions, block_number) {
                             else {
                                 resolve();
                             }
+                            stmt.finalize();
                         });
                     });
-                    break; // If successful, break out of the retry loop
+                    break;
                 }
                 catch (error) {
                     console.error(`Error processing transaction ${transaction_hash}. Retries left: ${retries - 1}`);
@@ -108,56 +108,15 @@ function processTransactions(provider, transactions, block_number) {
                         console.error(`Failed to process transaction ${transaction_hash} after 3 attempts`);
                     }
                     else {
-                        yield sleep(1000); // Wait for 1 second before retrying
+                        yield sleep(5000);
                     }
                 }
             }
         }
     });
 }
-const CHUNK_SIZE = 10;
-const chunking = (provider, start, end) => __awaiter(void 0, void 0, void 0, function* () {
-    if (!end) {
-        end = yield provider.getBlockNumber();
-    }
-    const tasks = [];
-    if (start >= end)
-        return;
-    let task_index = end;
-    if (end - start > CHUNK_SIZE) {
-        for (; task_index > start; task_index -= CHUNK_SIZE) {
-            tasks.push(processBlockRange(provider, task_index - CHUNK_SIZE, task_index));
-        }
-    }
-    if (task_index <= 0) {
-        tasks.push(processBlockRange(provider, 0, task_index + CHUNK_SIZE));
-    }
-    if (end - start <= CHUNK_SIZE) {
-        tasks.push(processBlockRange(provider, start, end));
-    }
-    yield Promise.all(tasks);
-});
-const DEFAULT_START = 67000;
-const runTransactionSync = (provider, latestBlockNumber) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("Latest onchain block", latestBlockNumber);
-    const MAXIMUM_SELECTOR = 'MAX(block_number)';
-    const query = `SELECT ${MAXIMUM_SELECTOR} FROM transactions`;
-    return new Promise((resolve, reject) => {
-        database_1.default.get(query, undefined, (err, row) => __awaiter(void 0, void 0, void 0, function* () {
-            if (err) {
-                console.log(err);
-                reject(err);
-            }
-            const latestSyncedBlock = row[MAXIMUM_SELECTOR];
-            console.log("Sync transactions in blocks from-to", `(${DEFAULT_START}, ${latestBlockNumber})`);
-            try {
-                yield chunking(provider, DEFAULT_START, latestBlockNumber);
-                resolve();
-            }
-            catch (error) {
-                reject(error);
-            }
-        }));
-    });
+const runTransactionSync = (provider, startBlock, endBlock) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(`Syncing transactions for blocks from ${startBlock} to ${endBlock}`);
+    yield processBlockRange(provider, startBlock, endBlock);
 });
 exports.runTransactionSync = runTransactionSync;

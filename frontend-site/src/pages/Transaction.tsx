@@ -68,7 +68,7 @@ const Transaction: React.FC = () => {
           </Stack>
           : transaction 
           && <Stack align="center">
-            <Text>Transaction {transaction.transaction_hash}</Text>
+            <Text>Transaction <CustomLink to={`/transaction/${transaction?.transaction_hash}`}>{transaction?.transaction_hash}</CustomLink></Text>
             <TableContainer>
               <Table variant='simple'>
                 <TableCaption>Transaction details</TableCaption>

@@ -27,11 +27,7 @@ const transformObjectToSqlInsert = (obj: any) => {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const syncBlockRange = async (provider: RpcProvider, start: number, end: number) => {
-	for(
-		let current_block = end; 
-		current_block > start && current_block <= end; 
-		current_block--
-	) {
+	for(let current_block = start; current_block <= end; current_block++) {
 		console.log(`Syncing block: ${current_block}`)
 		let retries = 3;
 		while (retries > 0) {
@@ -57,77 +53,32 @@ const syncBlockRange = async (provider: RpcProvider, start: number, end: number)
 				const { columns, values } = transformObjectToSqlInsert(insertSqlBlock)
 
 				await new Promise<void>((resolve, reject) => {
-					db.run(`INSERT OR REPLACE INTO blocks (${columns}) VALUES(${values})`, undefined, (err) => {
+					const stmt = db.prepare(`INSERT OR REPLACE INTO blocks (${columns}) VALUES(${values})`);
+					stmt.run(function(err) {
 						if(err) {
 							console.error("Failed to insert data", err);
 							reject(err);
 						} else {
 							resolve();
 						}
+						stmt.finalize();
 					});
 				});
 
-				break; // If successful, break out of the retry loop
+				break;
 			} catch (error) {
 				console.error(`Error syncing block ${current_block}. Retries left: ${retries - 1}`);
 				retries--;
 				if (retries === 0) {
 					console.error(`Failed to sync block ${current_block} after 3 attempts`);
 				} else {
-					await sleep(1000); // Wait for 1 second before retrying
+					await sleep(5000);
 				}
 			}
 		}
 	}
 }
 
-const CHUNK_SIZE = 100;
-const chunking = async (provider: RpcProvider, start: number, end: number) => {
-	if (!end) {
-		end = await provider.getBlockNumber();
-	}
-	const tasks: Promise<any>[] = []
-	if(start >= end) return;
-
-	let task_index = end;
-	if(end-start > CHUNK_SIZE) {
-		for( ;task_index > start; task_index -= CHUNK_SIZE) {
-			tasks.push(syncBlockRange(provider, task_index - CHUNK_SIZE, task_index))
-		}
-	}
-	if(task_index <= 0) {
-		// "PROCESS REST RANGE", 0, CHUNK_SIZE + task_index
-		tasks.push(syncBlockRange(provider, 0, task_index + CHUNK_SIZE))
-	}
-	if(end-start <= CHUNK_SIZE) {
-		tasks.push(syncBlockRange(provider, start, end))
-	}
-	await Promise.all(tasks)
-}
-
-// Setting default start in case of no db it will sync block upto default block.
-// Make it 0 if want to sync all blocks
-const DEFAULT_START = 67000;
-export const runBlockSync = async (provider: RpcProvider, latestBlockNumber: number) => {
-	console.log("Latest onchain block", latestBlockNumber)
-
-	const MAXIMUM_SELECTOR = 'MAX(block_number)';
-
-  	const query = `SELECT ${MAXIMUM_SELECTOR} FROM blocks`
-	return new Promise<void>((resolve, reject) => {
-		db.get(query, undefined, async (err: any, row: any) => {
-			if(err) {
-				console.log(err);
-				reject(err);
-			}
-			const latestSyncedBlock = row[MAXIMUM_SELECTOR]
-			console.log("Sync blocks from-to" , `(${latestSyncedBlock ?? DEFAULT_START}, ${latestBlockNumber})`)
-			try {
-				await chunking(provider, latestSyncedBlock ?? DEFAULT_START, latestBlockNumber);
-				resolve();
-			} catch (error) {
-				reject(error);
-			}
-		})
-	});
+export const runBlockSync = async (provider: RpcProvider, startBlock: number, endBlock: number) => {
+	await syncBlockRange(provider, startBlock, endBlock);
 }
